@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+.agents/
+.codex/
+.pytest_cache/
+.ipynb_checkpoints/
+
+*.log
+.DS_Store
+Thumbs.db
