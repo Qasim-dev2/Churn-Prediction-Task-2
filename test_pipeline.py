@@ -1,5 +1,6 @@
 """Unit tests for the Customer Churn Prediction System pipeline.
-Tests configuration paths, dataset generation heuristics, and data cleaning routines.
+Tests configuration paths, dataset generation heuristics, data cleaning routines,
+logger instantiation, and ChurnPredictor risk factor evaluation.
 """
 
 import unittest
@@ -10,10 +11,11 @@ from config import (
     BASE_DIR,
     CATEGORICAL_COLUMNS,
     FEATURE_ORDER,
-    RANDOM_SEED,
 )
 from generate_dataset import calculate_churn_status, spending_range
 from data_preparation import clean_missing_values
+from logger import get_logger
+from predictor import ChurnPredictor
 
 
 class TestConfig(unittest.TestCase):
@@ -84,6 +86,26 @@ class TestDataPreparation(unittest.TestCase):
         self.assertEqual(cleaned_df["Age"].isna().sum(), 0)
         self.assertEqual(cleaned_df["Monthly_Spending"].isna().sum(), 0)
         self.assertEqual(cleaned_df["Satisfaction_Score"].isna().sum(), 0)
+
+
+class TestLoggerAndPredictor(unittest.TestCase):
+    """Test suite for logger and predictor module utilities."""
+
+    def test_logger_instantiation(self):
+        log = get_logger("test_logger")
+        self.assertEqual(log.name, "test_logger")
+
+    def test_predictor_risk_signals(self):
+        predictor = ChurnPredictor.__new__(ChurnPredictor)
+        customer = {
+            "Satisfaction_Score": 1,
+            "Customer_Support_Requests": 7,
+            "Login_Frequency": "Low",
+            "Payment_Delay": 20,
+        }
+        signals = predictor.evaluate_risk_signals(customer)
+        self.assertIn("Low satisfaction score", signals)
+        self.assertIn("High number of customer support requests", signals)
 
 
 if __name__ == "__main__":
