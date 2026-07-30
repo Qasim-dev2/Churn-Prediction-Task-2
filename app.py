@@ -5,12 +5,15 @@ import pandas as pd
 import streamlit as st
 
 
-BASE_DIR = Path(__file__).resolve().parent
-MODEL_PATH = BASE_DIR / "models" / "churn_model.pkl"
-SCALER_PATH = BASE_DIR / "models" / "scaler.pkl"
-RESULTS_PATH = BASE_DIR / "results" / "model_comparison.csv"
-GRAPHS_DIR = BASE_DIR / "graphs"
-EVALUATION_DIR = GRAPHS_DIR / "evaluation"
+from config import (
+    BASE_DIR,
+    CLEANED_DATASET_PATH,
+    EVALUATION_DIR,
+    GRAPHS_DIR,
+    MODEL_COMPARISON_PATH as RESULTS_PATH,
+    MODEL_PATH,
+    SCALER_PATH,
+)
 
 FEATURE_ORDER = [
     "Age",
@@ -60,6 +63,7 @@ EVALUATION_IMAGES = [
     ("Confusion Matrix", EVALUATION_DIR / "confusion_matrix.png"),
     ("Model Comparison F1 Score", EVALUATION_DIR / "model_comparison_f1.png"),
     ("Feature Importance", EVALUATION_DIR / "feature_importance.png"),
+    ("ROC Curve", EVALUATION_DIR / "roc_curve.png"),
 ]
 
 
