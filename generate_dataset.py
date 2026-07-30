@@ -1,40 +1,47 @@
+"""Dataset generation script for Customer Churn Prediction.
+Generates synthetic customer records based on realistic business rules,
+introduces intentional duplicates and missing values for data cleaning practice.
+"""
+
 from datetime import datetime, timedelta
-from pathlib import Path
 import random
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 
+from config import (
+    BASE_DIR,
+    DATASET_DIR,
+    DUPLICATE_ROWS,
+    MISSING_RATE,
+    NUM_RECORDS,
+    RANDOM_SEED,
+    RAW_DATASET_PATH,
+)
 
-BASE_DIR = Path(__file__).resolve().parent
-DATASET_DIR = BASE_DIR / "dataset"
-RAW_DATASET_PATH = DATASET_DIR / "customer_churn_dataset.csv"
 
-RANDOM_SEED = 42
-NUM_RECORDS = 2000
-DUPLICATE_ROWS = 10
-MISSING_RATE = 0.02
-
-
-def spending_range(subscription_type):
+def spending_range(subscription_type: str) -> Tuple[int, int]:
+    """Return (min, max) monthly spending range based on subscription plan."""
     ranges = {
         "Basic": (500, 1500),
         "Standard": (1500, 3000),
         "Premium": (3000, 6000),
     }
-    return ranges[subscription_type]
+    return ranges.get(subscription_type, (500, 1500))
 
 
 def calculate_churn_status(
-    satisfaction_score,
-    support_requests,
-    login_frequency,
-    payment_delay,
-    tenure,
-    days_since_last_activity,
-    contract_length,
-    subscription_type,
-):
+    satisfaction_score: int,
+    support_requests: int,
+    login_frequency: str,
+    payment_delay: int,
+    tenure: int,
+    days_since_last_activity: int,
+    contract_length: str,
+    subscription_type: str,
+) -> str:
+    """Calculate churn risk status using business logic heuristics."""
     churn_score = 0
 
     if satisfaction_score <= 2:
@@ -61,7 +68,8 @@ def calculate_churn_status(
     return "Yes" if churn_score >= 6 else "No"
 
 
-def generate_dataset():
+def generate_dataset() -> pd.DataFrame:
+    """Generate synthetic dataset and save to CSV file."""
     np.random.seed(RANDOM_SEED)
     random.seed(RANDOM_SEED)
 
@@ -178,6 +186,8 @@ def generate_dataset():
     print(f"Total columns: {df.shape[1]}")
     print("\nFirst 5 rows:")
     print(df.head())
+
+    return df
 
 
 if __name__ == "__main__":
