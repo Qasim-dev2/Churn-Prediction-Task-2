@@ -1,5 +1,9 @@
-from pathlib import Path
+"""Model training and evaluation module for the Customer Churn Prediction System.
+Trains Logistic Regression, Decision Tree, and Random Forest classifiers, evaluates metrics,
+selects the best model based on F1-score/ROC-AUC, and persists serialized model and scaler objects.
+"""
 
+from typing import Dict, Tuple, Any
 import joblib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -17,17 +21,20 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
+from config import (
+    BASE_DIR,
+    CLEANED_DATASET_PATH,
+    MODEL_COMPARISON_PATH,
+    MODEL_PATH,
+    MODELS_DIR,
+    RANDOM_SEED,
+    RESULTS_DIR,
+    SCALER_PATH,
+)
 
-BASE_DIR = Path(__file__).resolve().parent
-DATASET_PATH = BASE_DIR / "dataset" / "cleaned_customer_churn_dataset.csv"
-MODELS_DIR = BASE_DIR / "models"
-RESULTS_DIR = BASE_DIR / "results"
-MODEL_PATH = MODELS_DIR / "churn_model.pkl"
-SCALER_PATH = MODELS_DIR / "scaler.pkl"
-MODEL_COMPARISON_PATH = RESULTS_DIR / "model_comparison.csv"
 
-
-def evaluate_model(model, X_test_scaled, y_test):
+def evaluate_model(model: Any, X_test_scaled: Any, y_test: Any) -> Dict[str, Any]:
+    """Evaluate trained classifier and return comprehensive metrics dictionary."""
     y_pred = model.predict(X_test_scaled)
     y_prob = model.predict_proba(X_test_scaled)[:, 1]
 
@@ -42,23 +49,30 @@ def evaluate_model(model, X_test_scaled, y_test):
     }
 
 
-def select_best_model(results_df, trained_models):
+def select_best_model(
+    results_df: pd.DataFrame, trained_models: Dict[str, Any]
+) -> Tuple[str, Any, float]:
+    """Select optimal model prioritizing Random Forest when metric scores are close."""
     max_f1 = results_df["F1_Score"].max()
-    random_forest_row = results_df[results_df["Model"] == "Random Forest"].iloc[0]
+    rf_rows = results_df[results_df["Model"] == "Random Forest"]
 
-    # Prefer Random Forest when it is practically tied because it gives native feature importances.
-    if random_forest_row["F1_Score"] >= max_f1 - 0.01:
-        return "Random Forest", trained_models["Random Forest"], random_forest_row["F1_Score"]
+    if not rf_rows.empty:
+        random_forest_row = rf_rows.iloc[0]
+        if random_forest_row["F1_Score"] >= max_f1 - 0.01:
+            return "Random Forest", trained_models["Random Forest"], float(random_forest_row["F1_Score"])
 
     best_row = results_df.sort_values("F1_Score", ascending=False).iloc[0]
-    best_name = best_row["Model"]
-    return best_name, trained_models[best_name], best_row["F1_Score"]
+    best_name = str(best_row["Model"])
+    return best_name, trained_models[best_name], float(best_row["F1_Score"])
 
 
-def train_models():
-    df = pd.read_csv(DATASET_PATH)
-    print("Cleaned dataset loaded successfully")
-    print("Dataset shape:", df.shape)
+def train_models() -> None:
+    """Load cleaned dataset, split, scale features, train models, and persist best model."""
+    if not CLEANED_DATASET_PATH.exists():
+        raise FileNotFoundError(f"Cleaned dataset not found at {CLEANED_DATASET_PATH}. Run data_preparation.py first.")
+
+    df = pd.read_csv(CLEANED_DATASET_PATH)
+    print("Cleaned dataset loaded successfully. Shape:", df.shape)
 
     X = df.drop(columns=["Churn_Status"])
     y = df["Churn_Status"]
@@ -67,7 +81,7 @@ def train_models():
         X,
         y,
         test_size=0.2,
-        random_state=42,
+        random_state=RANDOM_SEED,
         stratify=y,
     )
 
@@ -76,9 +90,9 @@ def train_models():
     X_test_scaled = scaler.transform(X_test)
 
     models = {
-        "Logistic Regression": LogisticRegression(max_iter=1000),
-        "Decision Tree": DecisionTreeClassifier(random_state=42),
-        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
+        "Logistic Regression": LogisticRegression(max_iter=1000, random_state=RANDOM_SEED),
+        "Decision Tree": DecisionTreeClassifier(random_state=RANDOM_SEED),
+        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=RANDOM_SEED),
     }
 
     results = []
@@ -98,10 +112,8 @@ def train_models():
         print("Recall:", round(metrics["Recall"], 4))
         print("F1 Score:", round(metrics["F1_Score"], 4))
         print("ROC-AUC:", round(metrics["ROC_AUC"], 4))
-        print("\nConfusion Matrix:")
-        print(metrics["Confusion_Matrix"])
-        print("\nClassification Report:")
-        print(metrics["Classification_Report"])
+        print("\nConfusion Matrix:\n", metrics["Confusion_Matrix"])
+        print("\nClassification Report:\n", metrics["Classification_Report"])
 
         results.append(
             {
@@ -125,7 +137,7 @@ def train_models():
     joblib.dump(scaler, SCALER_PATH)
 
     print("\nModel comparison saved at:", MODEL_COMPARISON_PATH.relative_to(BASE_DIR))
-    print("\nModel Comparison:")
+    print("\nModel Comparison Table:")
     print(results_df)
     print("\nBest model name:", best_model_name)
     print("Best F1 score:", round(best_f1_score, 4))
